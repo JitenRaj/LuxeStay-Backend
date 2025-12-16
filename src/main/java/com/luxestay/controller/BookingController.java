@@ -3,6 +3,8 @@ package com.luxestay.controller;
 import com.luxestay.dto.BookingRequestDto;
 import com.luxestay.model.Booking;
 import com.luxestay.service.BookingService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,41 +15,51 @@ import java.util.List;
 @RequestMapping("/api/bookings")
 public class BookingController {
 
+    private static final Logger logger = LoggerFactory.getLogger(BookingController.class);
     private final BookingService bookingService;
 
     public BookingController(BookingService bookingService) {
         this.bookingService = bookingService;
     }
 
-    // Endpoint: POST /api/bookings
     @PostMapping
     public ResponseEntity<?> createBooking(@RequestBody BookingRequestDto request, Principal principal) {
+        logger.info("Received booking request from user: {}", principal.getName());
         try {
-            // principal.getName() gets the username from the Basic Auth token automatically
             Booking booking = bookingService.createBooking(principal.getName(), request);
             return ResponseEntity.ok(booking);
         } catch (RuntimeException e) {
+            logger.error("Error processing booking for user {}: {}", principal.getName(), e.getMessage());
             return ResponseEntity.badRequest().body("{\"message\": \"" + e.getMessage() + "\"}");
         }
     }
 
-    // Endpoint: GET /api/bookings/user/{username} (Matches your api.js)
     @GetMapping("/user/{username}")
     public ResponseEntity<List<Booking>> getUserBookings(@PathVariable String username, Principal principal) {
-        // Security check: Ensure logged-in user can only see their own bookings
-        if (!principal.getName().equals(username) && !username.equals("admin")) { // simplistic admin check
+        if (!principal.getName().equals(username) && !username.equals("admin")) {
+            logger.warn("Unauthorized access attempt. User {} tried to view bookings of {}", principal.getName(), username);
             return ResponseEntity.status(403).build();
         }
         return ResponseEntity.ok(bookingService.getUserBookings(username));
     }
 
-    // Endpoint: DELETE /api/bookings/{id}
+    // NEW ENDPOINT: Recent Bookings
+    @GetMapping("/recent")
+    public ResponseEntity<List<Booking>> getRecentBookings(Principal principal) {
+        // Automatically uses the logged-in user's name
+        String username = principal.getName();
+        logger.info("Fetching recent bookings for user: {}", username);
+        return ResponseEntity.ok(bookingService.getRecentBookings(username));
+    }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> cancelBooking(@PathVariable Long id) {
+    public ResponseEntity<?> cancelBooking(@PathVariable Long id, Principal principal) {
+        logger.info("User {} requested cancellation for booking ID: {}", principal.getName(), id);
         try {
             bookingService.cancelBooking(id);
             return ResponseEntity.ok().body("{\"message\": \"Cancelled\"}");
         } catch (Exception e) {
+            logger.error("Error cancelling booking {}: {}", id, e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
