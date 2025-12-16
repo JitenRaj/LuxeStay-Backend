@@ -51,11 +51,12 @@ public class SecurityConfig {
     // Instead of manually creating DaoAuthenticationProvider (which is failing),
     // we ask Spring's AuthenticationConfiguration to give us the manager.
     // This automatically links your UserDetailsService and PasswordEncoder.
-
+    /*
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
+    */
     // --- FIX ENDS HERE ---
 
     @Bean
